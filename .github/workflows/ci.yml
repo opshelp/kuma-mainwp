@@ -1,0 +1,120 @@
+name: Checks
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  php:
+    name: PHP ${{ matrix.php }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.1', '8.2', '8.3', '8.4', '8.5']
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: openssl, zip
+          coverage: none
+      - name: Syntax
+        run: find includes views tests scripts -name '*.php' -print0 | xargs -0 -n1 php -l && php -l kuma-mainwp.php && php -l uninstall.php
+      - name: Unit and security regressions
+        run: |
+          php tests/run.php
+          php tests/security.php
+          php tests/package.php
+      - name: Build release archives
+        run: |
+          php scripts/package.php
+          php scripts/package.php --source
+
+  integration:
+    name: Integration
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    services:
+      database:
+        image: mariadb:11.4
+        env:
+          MARIADB_DATABASE: kuma_test
+          MARIADB_USER: kuma_test
+          MARIADB_PASSWORD: fixture-database-password
+          MARIADB_ROOT_PASSWORD: fixture-root-password
+        ports:
+          - 8879:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s --health-timeout=5s --health-retries=30
+      kuma:
+        image: louislam/uptime-kuma:2.5.5@sha256:c74379ac4509ce2d2c2633f509e67003ee2e45b6e995c5e43fc101f45a0e1fbe
+        env:
+          UPTIME_KUMA_DB_TYPE: sqlite
+        ports:
+          - 8878:3001
+    env:
+      KMW_TESTS_ALLOW_DESTRUCTIVE: '1'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
+        with:
+          php-version: '8.3'
+          extensions: openssl, zip, mysqli, mbstring, curl
+          tools: wp-cli:2.12.0
+          coverage: none
+      - name: Prepare disposable WordPress and packaged plugin
+        run: |
+          wp core download --version=7.1.2 --path=.dev/wordpress
+          wp config create --path=.dev/wordpress --dbname=kuma_test --dbuser=kuma_test --dbpass=fixture-database-password --dbhost=127.0.0.1:8879
+          wp config set DISABLE_WP_CRON true --raw --path=.dev/wordpress
+          wp config set KMW_TEST_INSTANCE true --raw --path=.dev/wordpress
+          wp core install --path=.dev/wordpress --url=http://127.0.0.1:8771 --title='Kuma test' --admin_user=kuma_test_admin --admin_password='Kuma-local-test-2026!' --admin_email=admin@example.test --skip-email
+          wp core verify-checksums --path=.dev/wordpress
+          wp plugin install mainwp --version=6.2 --activate --path=.dev/wordpress
+          php scripts/package.php
+          wp plugin install "$(pwd)/dist/kuma-mainwp-0.2.1.zip" --activate --path=.dev/wordpress
+      - name: Prepare disposable Kuma
+        run: |
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent 'http://127.0.0.1:8878/socket.io/?EIO=4&transport=polling' > /dev/null; then break; fi
+            sleep 2
+          done
+          php tests/setup-kuma.php
+      - name: Run WordPress, MainWP and real Kuma tests
+        run: |
+          php -S 127.0.0.1:8772 tests/metrics-server.php > .dev/metrics.log 2>&1 &
+          metrics_pid=$!
+          trap 'kill "$metrics_pid"' EXIT
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent --user ':fixture-secret' http://127.0.0.1:8772/metrics > /dev/null; then break; fi
+            sleep 1
+          done
+          php tests/integration.php
+          php tests/mainwp.php
+          php tests/provisioning.php
+
+  secrets:
+    name: Secrets
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Scan complete Git history
+        run: |
+          curl --fail --silent --show-error --location https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz --output "$RUNNER_TEMP/gitleaks.tar.gz"
+          echo "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  $RUNNER_TEMP/gitleaks.tar.gz" | sha256sum --check
+          tar -xzf "$RUNNER_TEMP/gitleaks.tar.gz" -C "$RUNNER_TEMP" gitleaks
+          "$RUNNER_TEMP/gitleaks" git --redact --no-banner --log-opts=--all .

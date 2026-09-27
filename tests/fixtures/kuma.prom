@@ -1,0 +1,12 @@
+# HELP monitor_status Monitor Status (1 = UP, 0= DOWN, 2= PENDING, 3= MAINTENANCE)
+# TYPE monitor_status gauge
+monitor_status{monitor_id="7",monitor_name="Client \"A\" \\ portal\nProduction",monitor_type="http",monitor_url="https://example.com/",monitor_hostname="",monitor_port="",team="Client A"} 1
+monitor_response_time{monitor_id="7",monitor_name="Client A",monitor_url="https://example.com/"} 1.25e2
+monitor_uptime_ratio{window="1d",monitor_id="7"} 9.995e-1
+monitor_uptime_ratio{monitor_id="7",window="30d"} 0
+monitor_uptime_ratio{monitor_id="7",window="365d"} NaN
+monitor_response_time_seconds{monitor_id="7",window="1d"} 0.25
+monitor_cert_days_remaining{monitor_id="7"} 42
+monitor_status{monitor_id="8",monitor_name="Maintenance",monitor_type="http",monitor_url="https://maintenance.example/"} 3
+monitor_response_time{monitor_id="8"} -1
+nodejs_heap_size_total_bytes 12345

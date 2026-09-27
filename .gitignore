@@ -1,0 +1,15 @@
+.dev/
+dist/
+vendor/
+.DS_Store
+.env
+.env.*
+*.log
+*.sql
+*.sql.gz
+*.sqlite
+*.sqlite3
+*.db
+*.pem
+*.key
+wp-config.php

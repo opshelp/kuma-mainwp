@@ -1,0 +1,7 @@
+* text=auto eol=lf
+*.png binary
+*.zip binary
+/.dev export-ignore
+/dist export-ignore
+/docs/superpowers export-ignore
+/docs/implementation-log.md export-ignore

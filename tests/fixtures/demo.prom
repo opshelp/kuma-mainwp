@@ -1,0 +1,19 @@
+# HELP monitor_status Monitor Status
+# TYPE monitor_status gauge
+monitor_status{monitor_id="7",monitor_name="Northstar Studio",monitor_type="http",monitor_url="https://northstar.example/"} 1
+monitor_response_time{monitor_id="7"} 124
+monitor_uptime_ratio{monitor_id="7",window="1d"} 1
+monitor_uptime_ratio{monitor_id="7",window="30d"} .9998
+monitor_uptime_ratio{monitor_id="7",window="365d"} .9991
+monitor_cert_days_remaining{monitor_id="7"} 62
+monitor_status{monitor_id="8",monitor_name="Harbor Shop",monitor_type="http",monitor_url="https://harbor.example/"} 0
+monitor_response_time{monitor_id="8"} -1
+monitor_uptime_ratio{monitor_id="8",window="1d"} .9983
+monitor_uptime_ratio{monitor_id="8",window="30d"} .9994
+monitor_uptime_ratio{monitor_id="8",window="365d"} .9971
+monitor_cert_days_remaining{monitor_id="8"} 41
+monitor_status{monitor_id="9",monitor_name="Fieldwork Journal",monitor_type="http",monitor_url="https://fieldwork.example/"} 3
+monitor_response_time{monitor_id="9"} 242
+monitor_uptime_ratio{monitor_id="9",window="1d"} 1
+monitor_uptime_ratio{monitor_id="9",window="30d"} .9999
+monitor_uptime_ratio{monitor_id="9",window="365d"} .9995

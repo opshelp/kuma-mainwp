@@ -74,6 +74,7 @@ jobs:
           coverage: none
       - name: Prepare disposable WordPress and packaged plugin
         run: |
+          mkdir -p .dev/wordpress
           wp core download --version=7.1.2 --path=.dev/wordpress
           wp config create --path=.dev/wordpress --dbname=kuma_test --dbuser=kuma_test --dbpass=fixture-database-password --dbhost=127.0.0.1:8879
           wp config set DISABLE_WP_CRON true --raw --path=.dev/wordpress

@@ -75,12 +75,13 @@ jobs:
       - name: Prepare disposable WordPress and packaged plugin
         run: |
           mkdir -p .dev/wordpress
-          wp core download --version=7.1.2 --path=.dev/wordpress
+          # ZIP avoids WP-CLI 2.12's PharData long-path truncation (wp-cli/wp-cli#6320).
+          wp core download https://wordpress.org/wordpress-7.1.2.zip --path=.dev/wordpress
+          wp core verify-checksums --path=.dev/wordpress
           wp config create --path=.dev/wordpress --dbname=kuma_test --dbuser=kuma_test --dbpass=fixture-database-password --dbhost=127.0.0.1:8879
           wp config set DISABLE_WP_CRON true --raw --path=.dev/wordpress
           wp config set KMW_TEST_INSTANCE true --raw --path=.dev/wordpress
           wp core install --path=.dev/wordpress --url=http://127.0.0.1:8771 --title='Kuma test' --admin_user=kuma_test_admin --admin_password='Kuma-local-test-2026!' --admin_email=admin@example.test --skip-email
-          wp core verify-checksums --path=.dev/wordpress
           wp plugin install mainwp --version=6.2 --activate --path=.dev/wordpress
           php scripts/package.php
           wp plugin install "$(pwd)/dist/kuma-mainwp-0.2.1.zip" --activate --path=.dev/wordpress
